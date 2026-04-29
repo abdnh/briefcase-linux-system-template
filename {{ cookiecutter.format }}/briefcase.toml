@@ -2,6 +2,26 @@
 [paths]
 app_path = "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/app"
 app_packages_path = "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/app_packages"
+{%- if cookiecutter.embed_python %}
+support_path = "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}"
+{{ {
+    "3.10": 'support_revision = "3.10.18+20251007"',
+    "3.11": 'support_revision = "3.11.13+20251007"',
+    "3.12": 'support_revision = "3.12.11+20251007"',
+    "3.13": 'support_revision = "3.13.8+20251007"',
+    "3.14": 'support_revision = "3.14.0+20251007"',
+}.get(cookiecutter.python_version|py_tag, "") }}
+# Remove the pieces of the standalone package that we don't need.
+cleanup_paths = [
+    "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/bin/2to3*",
+    "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/bin/idle3*",
+    "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/bin/pydoc*",
+    "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/lib/itcl*",
+    "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/lib/tcl8*",
+    "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/lib/Tix8*",
+    "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/lib/tk8*",
+]
+{%- endif %}
 
 icon.16 = "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/share/icons/hicolor/16x16/apps/{{ cookiecutter.bundle_identifier }}.png"
 icon.32 = "{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/share/icons/hicolor/32x32/apps/{{ cookiecutter.bundle_identifier }}.png"

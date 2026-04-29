@@ -104,6 +104,20 @@ int main(int argc, char *argv[]) {
         Py_ExitStatusException(status);
     }
 
+#ifdef EMBEDDED_PYTHON
+    // Point Python at the embedded standalone interpreter shipped inside the
+    // app bundle. This decouples the package from the host distro's Python.
+    path = malloc(PATH_MAX);
+    snprintf(path, PATH_MAX, "%s/" APP_LIBDIR "/" APP_NAME "/python", install_path);
+    debug_log("config.home: %s\n", path);
+    status = PyConfig_SetBytesString(&config, &config.home, path);
+    if (PyStatus_Exception(status)) {
+        // crash_dialog("Unable to set Python home: %s", status.err_msg);
+        PyConfig_Clear(&config);
+        Py_ExitStatusException(status);
+    }
+#endif
+
     // Read the site config
     status = PyConfig_Read(&config);
     if (PyStatus_Exception(status)) {
@@ -114,8 +128,48 @@ int main(int argc, char *argv[]) {
 
     // Set the full module path. This includes the stdlib, site-packages, and app code.
     debug_log("PYTHONPATH:\n");
+#ifndef EMBEDDED_PYTHON
     path = malloc(PATH_MAX);
+#endif
 
+#ifdef EMBEDDED_PYTHON
+    // Embedded python-build-standalone install layout:
+    //   <install_path>/<libdir>/<app_name>/python/lib/python<TAG>.zip
+    //   <install_path>/<libdir>/<app_name>/python/lib/python<TAG>
+    //   <install_path>/<libdir>/<app_name>/python/lib/python<TAG>/lib-dynload
+    snprintf(path, PATH_MAX, "%s/" APP_LIBDIR "/" APP_NAME "/python/lib/python" PY_TAG ".zip", install_path);
+    debug_log("- %s\n", path);
+    wtmp_str = Py_DecodeLocale(path, NULL);
+    status = PyWideStringList_Append(&config.module_search_paths, wtmp_str);
+    if (PyStatus_Exception(status)) {
+        // crash_dialog("Unable to set zipped form of stdlib path: %s", status.err_msg);
+        PyConfig_Clear(&config);
+        Py_ExitStatusException(status);
+    }
+    PyMem_RawFree(wtmp_str);
+
+    snprintf(path, PATH_MAX, "%s/" APP_LIBDIR "/" APP_NAME "/python/lib/python" PY_TAG, install_path);
+    debug_log("- %s\n", path);
+    wtmp_str = Py_DecodeLocale(path, NULL);
+    status = PyWideStringList_Append(&config.module_search_paths, wtmp_str);
+    if (PyStatus_Exception(status)) {
+        // crash_dialog("Unable to set unpacked form of stdlib path: %s", status.err_msg);
+        PyConfig_Clear(&config);
+        Py_ExitStatusException(status);
+    }
+    PyMem_RawFree(wtmp_str);
+
+    snprintf(path, PATH_MAX, "%s/" APP_LIBDIR "/" APP_NAME "/python/lib/python" PY_TAG "/lib-dynload", install_path);
+    debug_log("- %s\n", path);
+    wtmp_str = Py_DecodeLocale(path, NULL);
+    status = PyWideStringList_Append(&config.module_search_paths, wtmp_str);
+    if (PyStatus_Exception(status)) {
+        // crash_dialog("Unable to set stdlib binary module path: %s", status.err_msg);
+        PyConfig_Clear(&config);
+        Py_ExitStatusException(status);
+    }
+    PyMem_RawFree(wtmp_str);
+#else
     // The unpacked form of the stdlib
     strcpy(path, "/usr/{{ cookiecutter.lib_dir }}/python" PY_TAG);
     debug_log("- %s\n", path);
@@ -139,6 +193,7 @@ int main(int argc, char *argv[]) {
         Py_ExitStatusException(status);
     }
     PyMem_RawFree(wtmp_str);
+#endif
 
     // Add the app path
     strcpy(path, install_path);

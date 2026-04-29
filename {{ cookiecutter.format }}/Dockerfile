@@ -11,31 +11,39 @@ ENV PIP_ROOT_USER_ACTION=ignore \
 {% if cookiecutter.vendor_base == "debian" -%}
 # Run apt non-interactively; use ARG so this only applies while building the image
 ARG DEBIAN_FRONTEND="noninteractive"
-
+{% if not cookiecutter.embed_python %}
 # Install System python
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
       python{{ cookiecutter.python_version|py_tag }}-dev \
       python{{ cookiecutter.python_version|py_tag }}-venv \
       python{{ cookiecutter.python_version|py_tag }}-pip
+{%- endif %}
 {%- elif cookiecutter.vendor_base == "rhel" -%}
+{% if not cookiecutter.embed_python %}
 # Install System python
 RUN dnf install -y \
       python{{ cookiecutter.python_version|py_tag }}-devel \
       python{{ cookiecutter.python_version|py_tag }}-pip
+{%- endif %}
 {%- elif cookiecutter.vendor_base == "suse" -%}
+{% if not cookiecutter.embed_python %}
 # Install System python
 RUN zypper install -y \
       python{{ cookiecutter.python_version|py_tag }}-devel \
       python{{ cookiecutter.python_version|py_tag }}-pip
+{%- endif %}
 {%- elif cookiecutter.vendor_base == "arch" -%}
+{% if not cookiecutter.embed_python %}
 # Install System python
 RUN pacman -Syu --noconfirm \
       python{{ cookiecutter.python_version|py_tag }} \
       python-pip \
       python-setuptools
 {%- endif %}
+{%- endif %}
 
+{% if not cookiecutter.embed_python -%}
 # Upgrade pip et alia
 # PEP 668 allows distros to mark the system Python as "externally managed". With this
 # configuration in the distro, `pip install` will error when using the system Python.
@@ -45,6 +53,7 @@ RUN pacman -Syu --noconfirm \
 RUN PIP_BREAK_SYSTEM_PACKAGES=1 \
     PIP_IGNORE_INSTALLED=1 \
     python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel
+{%- endif %}
 
 # As root, install system packages required by app
 ARG SYSTEM_REQUIRES
@@ -73,6 +82,12 @@ RUN groupadd --non-unique --gid $HOST_GID briefcase && \
 
 # Use the brutus user for operations in the container
 USER brutus
+{%- endif %}
+
+{% if cookiecutter.embed_python -%}
+# Put the embedded standalone Python on PATH so `pip install` builds wheels
+# against the bundled interpreter rather than any distro-provided python3.
+ENV PATH="/app/{{ cookiecutter.app_name }}-{{ cookiecutter.version }}/usr/{{ cookiecutter.lib_dir }}/{{ cookiecutter.app_name }}/python/bin:${PATH}"
 {%- endif %}
 
 # ========== START USER PROVIDED CONTENT ==========
